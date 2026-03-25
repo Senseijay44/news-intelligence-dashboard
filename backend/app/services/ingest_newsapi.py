@@ -1,5 +1,6 @@
 import httpx
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.core.config import settings
@@ -90,5 +91,22 @@ def ingest_newsapi(session: Session, query: str | None = None, page_size: int = 
         created += 1
 
     session.commit()
+
+    total_articles = session.exec(select(func.count(Article.id))).one()
+    geolocated_articles = session.exec(
+        select(func.count(Article.id))
+        .where(Article.latitude.is_not(None))
+        .where(Article.longitude.is_not(None))
+    ).one()
+
     clustering = rebuild_events(session) if created else {"events": 0, "linked_articles": 0}
-    return {"created": created, "skipped": skipped, "clustering": clustering}
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        "totals": {
+            "articles": int(total_articles or 0),
+            "geolocated_articles": int(geolocated_articles or 0),
+        },
+        "clustering": clustering,
+    }
