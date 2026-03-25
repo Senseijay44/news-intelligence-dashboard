@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 const NewsMapLeaflet = dynamic(() => import("./NewsMapClient"), {
   ssr: false,
-  loading: () => <div style={{ padding: 16 }}>Loading map...</div>,
+  loading: () => <div className="map-loading">Loading map intelligence...</div>,
 });
 
 type MapPoint = {
@@ -15,6 +15,7 @@ type MapPoint = {
   title: string;
   location_name?: string;
   article_count?: number;
+  source_count?: number;
   confidence_score?: number;
 };
 
@@ -26,7 +27,7 @@ export default function NewsMap({ points }: { points: MapPoint[] }) {
   }, []);
 
   if (!mounted) {
-    return <div style={{ padding: 16 }}>Loading map...</div>;
+    return <div className="map-loading">Loading map intelligence...</div>;
   }
 
   return <NewsMapLeaflet points={points} />;
