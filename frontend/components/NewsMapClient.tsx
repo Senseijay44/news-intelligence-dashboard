@@ -11,17 +11,16 @@ type MapPoint = {
   title: string;
   location_name?: string;
   article_count?: number;
+  source_count?: number;
   confidence_score?: number;
 };
 
-const defaultIcon = L.icon({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+const markerIcon = L.divIcon({
+  className: "intel-marker-wrapper",
+  html: '<span class="intel-marker"></span>',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -10],
 });
 
 export default function NewsMapClient({ points }: { points: MapPoint[] }) {
@@ -34,11 +33,15 @@ export default function NewsMapClient({ points }: { points: MapPoint[] }) {
       return;
     }
 
-    const map = L.map(mapRef.current).setView([20, 0], 2);
+    const map = L.map(mapRef.current, { zoomControl: false }).setView([20, 0], 2);
     mapInstanceRef.current = map;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; CARTO',
+      subdomains: "abcd",
+      maxZoom: 20,
     }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
@@ -62,11 +65,19 @@ export default function NewsMapClient({ points }: { points: MapPoint[] }) {
     markerLayer.clearLayers();
 
     points.forEach((point) => {
-      const marker = L.marker([point.latitude, point.longitude], { icon: defaultIcon });
+      const marker = L.marker([point.latitude, point.longitude], { icon: markerIcon });
 
-      marker.bindPopup(
-        `<strong>${point.title}</strong><br/>${point.location_name || "Unknown location"}<br/>Related articles: ${point.article_count ?? 1}<br/>Confidence: ${Math.round((point.confidence_score ?? 0) * 100)}%`,
-      );
+      marker.bindPopup(`
+        <div class="popup-card">
+          <div class="popup-title">${point.title}</div>
+          <div class="popup-subtitle">${point.location_name || "Unknown location"}</div>
+          <div class="popup-metrics">
+            <span>${point.article_count ?? 1} articles</span>
+            ${point.source_count ? `<span>${point.source_count} sources</span>` : ""}
+            <span>${Math.round((point.confidence_score ?? 0) * 100)}% confidence</span>
+          </div>
+        </div>
+      `);
 
       marker.addTo(markerLayer);
     });
@@ -79,5 +90,5 @@ export default function NewsMapClient({ points }: { points: MapPoint[] }) {
     }
   }, [points]);
 
-  return <div ref={mapRef} style={{ height: "100vh", width: "100%" }} />;
+  return <div ref={mapRef} className="map-canvas" />;
 }

@@ -23,6 +23,7 @@ class EventMapPoint(BaseModel):
     latitude: float
     longitude: float
     article_count: int
+    source_count: int = 0
     confidence_score: float
     first_seen_at: datetime
     last_updated_at: datetime
