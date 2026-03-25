@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
-const NewsMapClient = dynamic(() => import("./NewsMapClient"), {
+const NewsMapLeaflet = dynamic(() => import("./NewsMapClient"), {
   ssr: false,
   loading: () => <div style={{ padding: 16 }}>Loading map...</div>,
 });
@@ -18,5 +19,15 @@ type MapPoint = {
 };
 
 export default function NewsMap({ points }: { points: MapPoint[] }) {
-  return <NewsMapClient points={points} />;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div style={{ padding: 16 }}>Loading map...</div>;
+  }
+
+  return <NewsMapLeaflet points={points} />;
 }
