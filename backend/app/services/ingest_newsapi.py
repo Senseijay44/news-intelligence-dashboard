@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.db.models import Article, Source
+from app.services.event import rebuild_events
 from app.services.geocode import extract_location_candidate, geocode_location
 from app.services.normalize import normalize_newsapi_article
 
@@ -61,4 +62,5 @@ def ingest_newsapi(session: Session, query: str | None = None, page_size: int = 
         created += 1
 
     session.commit()
-    return {"created": created, "skipped": skipped}
+    clustering = rebuild_events(session) if created else {"events": 0, "linked_articles": 0}
+    return {"created": created, "skipped": skipped, "clustering": clustering}

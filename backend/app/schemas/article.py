@@ -9,6 +9,7 @@ class ArticleRead(BaseModel):
     url: str
     author: Optional[str] = None
     description: Optional[str] = None
+    event_id: Optional[int] = None
     published_at: Optional[datetime] = None
     location_name: Optional[str] = None
     latitude: Optional[float] = None

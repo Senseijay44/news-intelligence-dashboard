@@ -33,9 +33,9 @@ export default function NewsMap({ points }: { points: any[] }) {
             <br />
             {point.location_name || "Unknown location"}
             <br />
-            <a href={point.url} target="_blank" rel="noreferrer">
-              Open article
-            </a>
+            Related articles: {point.article_count ?? 1}
+            <br />
+            Confidence: {Math.round((point.confidence_score ?? 0) * 100)}%
           </Popup>
         </Marker>
       ))}
