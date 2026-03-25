@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 
 const LeafletMapContainer = MapContainer as any;
 const LeafletTileLayer = TileLayer as any;
@@ -30,17 +30,19 @@ type MapPoint = {
 };
 
 export default function NewsMap({ points }: { points: MapPoint[] }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div style={{ padding: 16 }}>Loading map...</div>;
+  }
+
   return (
-    <LeafletMapContainer
-      center={[20, 0]}
-      zoom={2}
-      scrollWheelZoom={true}
-      style={{ height: "100vh", width: "100%" }}
-    >
-      <LeafletTileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <LeafletMapContainer center={[20, 0]} zoom={2} scrollWheelZoom={true} style={{ height: "100vh", width: "100%" }}>
+      <LeafletTileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {points.map((point) => (
         <LeafletMarker key={point.id} position={[point.latitude, point.longitude]} icon={defaultIcon}>
           <LeafletPopup>

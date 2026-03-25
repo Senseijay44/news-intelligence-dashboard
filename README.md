@@ -30,6 +30,11 @@ Edit `backend/.env` and set:
 NEWSAPI_KEY=your_real_key_here  # required; do not leave as replace_me
 ```
 
+Important runtime wiring details:
+- `backend/.env.example` is a template only.
+- Docker Compose loads backend runtime env from `backend/.env`.
+- `backend/.env` values are injected into the backend container environment (including `NEWSAPI_KEY`).
+
 > Keep `DATABASE_URL` set to the Docker hostname (`...@db:5432/...`) when running via Compose.
 
 ---
@@ -67,7 +72,15 @@ Expected signs of success:
 - backend logs `Database is ready`
 - alembic upgrade completes
 - no `sqlalchemy.exc.ArgumentError` in backend logs
-- frontend no longer errors with `EAI_AGAIN backend`
+- no `NEWSAPI_KEY is unset or still set to 'replace_me'` warning when a valid key is set in `backend/.env`
+- frontend no longer errors with `Missing <html> and <body> tags in the root layout.`
+- frontend no longer errors with `Map container is already initialized.`
+
+You can explicitly confirm the backend sees the key:
+
+```bash
+docker compose exec backend sh -lc 'echo "$NEWSAPI_KEY"'
+```
 
 ---
 
@@ -79,7 +92,7 @@ Trigger ingestion once:
 curl -X POST http://localhost:8000/api/v1/ingest/run
 ```
 
-If NEWSAPI key is missing or still set to `replace_me`, the API now returns HTTP 400 with a clear configuration error message.
+If NEWSAPI key is missing or still set to `replace_me`, the API returns HTTP 400 with a clear configuration error message.
 
 Once you set a valid `NEWSAPI_KEY`, re-run the ingestion command and then open the frontend map and sidebar to view new articles.
 
