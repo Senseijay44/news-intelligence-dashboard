@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     newsapi_key: str = ""
     default_news_query: str = "world OR politics OR economy OR conflict OR science"
     ingest_interval_minutes: int = 15
+    ingest_page_size: int = 100
+    ingest_max_pages: int = 5
+    ingest_max_articles_per_run: int = 500
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

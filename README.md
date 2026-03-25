@@ -28,6 +28,9 @@ Edit `backend/.env` and set:
 
 ```env
 NEWSAPI_KEY=your_real_key_here  # required; do not leave as replace_me
+INGEST_PAGE_SIZE=100             # requested page size per NewsAPI call (capped at provider max)
+INGEST_MAX_PAGES=5               # max result pages to request per ingest run
+INGEST_MAX_ARTICLES_PER_RUN=500  # hard cap across all fetched pages
 ```
 
 Important runtime wiring details:
@@ -36,6 +39,9 @@ Important runtime wiring details:
 - `backend/.env` values are injected into the backend container environment (including `NEWSAPI_KEY`).
 
 > Keep `DATABASE_URL` set to the Docker hostname (`...@db:5432/...`) when running via Compose.
+
+If you do not set the ingest variables, the backend defaults are used (`100`, `5`, `500`).
+For NewsAPI, per-page size is clamped to the provider-safe maximum of 100 articles/page.
 
 ---
 
@@ -95,6 +101,13 @@ curl -X POST http://localhost:8000/api/v1/ingest/run
 If NEWSAPI key is missing or still set to `replace_me`, the API returns HTTP 400 with a clear configuration error message.
 
 Once you set a valid `NEWSAPI_KEY`, re-run the ingestion command and then open the frontend map and sidebar to view new articles.
+
+Ingestion now paginates NewsAPI results until one of these limits is hit:
+- `INGEST_MAX_PAGES` pages processed
+- `INGEST_MAX_ARTICLES_PER_RUN` fetched articles
+- provider returns fewer than requested items / no more pages
+
+`POST /api/v1/ingest/run` returns operational stats including `fetched`, `created`, `skipped`, `pages_processed`, and `distinct_sources_seen` so you can verify ingestion density per run.
 
 ---
 
