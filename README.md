@@ -27,7 +27,7 @@ cp backend/.env.example backend/.env
 Edit `backend/.env` and set:
 
 ```env
-NEWSAPI_KEY=your_real_key_here
+NEWSAPI_KEY=your_real_key_here  # required; do not leave as replace_me
 ```
 
 > Keep `DATABASE_URL` set to the Docker hostname (`...@db:5432/...`) when running via Compose.
@@ -79,7 +79,9 @@ Trigger ingestion once:
 curl -X POST http://localhost:8000/api/v1/ingest/run
 ```
 
-Then open the frontend map and sidebar to view new articles.
+If NEWSAPI key is missing or still set to `replace_me`, the API now returns HTTP 400 with a clear configuration error message.
+
+Once you set a valid `NEWSAPI_KEY`, re-run the ingestion command and then open the frontend map and sidebar to view new articles.
 
 ---
 
