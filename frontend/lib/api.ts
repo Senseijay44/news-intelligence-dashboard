@@ -1,5 +1,7 @@
+const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
+
 export async function fetchMapPoints() {
-  const res = await fetch("http://localhost:8000/api/v1/articles/map", {
+  const res = await fetch(`${API_BASE_URL}/api/v1/articles/map`, {
     cache: "no-store",
   });
 

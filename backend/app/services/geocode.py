@@ -1,37 +1,66 @@
-import re
+from __future__ import annotations
+
 from typing import Optional, Tuple
+
+import spacy
 from geopy.geocoders import Nominatim
+from sqlmodel import Session, select
+
+from app.db.models import GeocodeCache
 
 geolocator = Nominatim(user_agent="news-intelligence-dashboard")
+_NLP = spacy.load("en_core_web_sm")
+_GPE_ENTITY_TYPES = {"GPE", "LOC", "FAC"}
 
-KNOWN_PREFIXES = [
-    "in ", "near ", "from ", "at ", "outside ", "across ", "inside ",
-]
+
+def _normalize_query(value: str) -> str:
+    return " ".join(value.lower().split())
 
 
 def extract_location_candidate(text: str) -> Optional[str]:
-    if not text:
+    if not text or not text.strip():
         return None
 
-    lowered = text.strip()
-    for prefix in KNOWN_PREFIXES:
-        idx = lowered.lower().find(prefix)
-        if idx >= 0:
-            candidate = lowered[idx + len(prefix):].split(",")[0].split(".")[0].strip()
+    doc = _NLP(text)
+    for ent in doc.ents:
+        if ent.label_ in _GPE_ENTITY_TYPES:
+            candidate = ent.text.strip(" .,;:\n\t")
             if len(candidate) > 2:
                 return candidate
 
-    match = re.search(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b", text)
-    return match.group(1) if match else None
+    return None
 
 
-def geocode_location(location_name: Optional[str]) -> Tuple[Optional[float], Optional[float]]:
+def geocode_location(session: Session, location_name: Optional[str]) -> Tuple[Optional[float], Optional[float]]:
     if not location_name:
         return None, None
+
+    normalized = _normalize_query(location_name)
+    cached = session.exec(
+        select(GeocodeCache).where(GeocodeCache.query_normalized == normalized)
+    ).first()
+    if cached:
+        return cached.latitude, cached.longitude
+
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
     try:
         result = geolocator.geocode(location_name, timeout=10)
         if result:
-            return result.latitude, result.longitude
+            latitude = result.latitude
+            longitude = result.longitude
     except Exception:
-        return None, None
-    return None, None
+        latitude = None
+        longitude = None
+
+    session.add(
+        GeocodeCache(
+            query=location_name,
+            query_normalized=normalized,
+            latitude=latitude,
+            longitude=longitude,
+        )
+    )
+    session.commit()
+    return latitude, longitude
