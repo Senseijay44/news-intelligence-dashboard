@@ -1,5 +1,4 @@
-import MapPanel from "../components/MapPanel";
-import Sidebar from "../components/Sidebar";
+import DashboardShell from "../components/DashboardShell";
 import { fetchMapPoints, fetchSources } from "../lib/api";
 
 type SearchParams = {
@@ -41,17 +40,12 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
   ]);
 
   return (
-    <main className="dashboard-layout">
-      <Sidebar
-        points={points}
-        filters={filters}
-        topicOptions={TOPIC_OPTIONS}
-        timeOptions={TIME_OPTIONS}
-        sourceOptions={sourceOptions}
-      />
-      <div className="map-column">
-        <MapPanel points={points} />
-      </div>
-    </main>
+    <DashboardShell
+      initialPoints={points}
+      initialSourceOptions={sourceOptions}
+      filters={filters}
+      topicOptions={TOPIC_OPTIONS}
+      timeOptions={TIME_OPTIONS}
+    />
   );
 }

@@ -1,3 +1,5 @@
+"use client";
+
 type FilterOption = { value: string; label: string };
 
 type SidebarProps = {
@@ -11,6 +13,10 @@ type SidebarProps = {
   topicOptions: FilterOption[];
   timeOptions: FilterOption[];
   sourceOptions: string[];
+  onRefresh: () => Promise<void>;
+  isRefreshing: boolean;
+  refreshError: string | null;
+  lastUpdatedAt: string | null;
 };
 
 function toConfidenceBadge(confidence: number | undefined) {
@@ -20,7 +26,26 @@ function toConfidenceBadge(confidence: number | undefined) {
   return "low";
 }
 
-export default function Sidebar({ points, filters, topicOptions, timeOptions, sourceOptions }: SidebarProps) {
+function formatTimestamp(value: string | null) {
+  if (!value) return "Not refreshed yet";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+export default function Sidebar({
+  points,
+  filters,
+  topicOptions,
+  timeOptions,
+  sourceOptions,
+  onRefresh,
+  isRefreshing,
+  refreshError,
+  lastUpdatedAt,
+}: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -76,6 +101,14 @@ export default function Sidebar({ points, filters, topicOptions, timeOptions, so
           <a href="/">Reset</a>
         </div>
       </form>
+
+      <div className="refresh-panel">
+        <button type="button" className="refresh-button" onClick={onRefresh} disabled={isRefreshing}>
+          {isRefreshing ? "Refreshing…" : "Refresh News"}
+        </button>
+        <p className="refresh-meta">Last updated: {formatTimestamp(lastUpdatedAt)}</p>
+        {refreshError ? <p className="refresh-error">{refreshError}</p> : null}
+      </div>
 
       <div className="results-meta">{points.length} mapped stories</div>
 
