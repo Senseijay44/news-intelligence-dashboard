@@ -22,7 +22,7 @@ services:
     build: ./backend
     container_name: news_backend
     env_file:
-      - ./backend/.env.example
+      - ./backend/.env
     depends_on:
       db:
         condition: service_healthy
