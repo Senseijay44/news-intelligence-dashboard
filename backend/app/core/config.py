@@ -14,5 +14,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    def has_valid_newsapi_key(self) -> bool:
+        return bool(self.newsapi_key.strip()) and self.newsapi_key.strip().lower() != "replace_me"
+
 
 settings = Settings()

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 
 from app.api.routes_articles import router as articles_router
@@ -8,6 +10,7 @@ from app.core.config import settings
 from app.services.scheduler import start_scheduler
 
 app = FastAPI(title=settings.app_name)
+logger = logging.getLogger(__name__)
 
 app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(articles_router, prefix=settings.api_v1_prefix)
@@ -17,4 +20,9 @@ app.include_router(ingest_router, prefix=settings.api_v1_prefix)
 
 @app.on_event("startup")
 def on_startup():
+    if not settings.has_valid_newsapi_key():
+        logger.warning(
+            "NEWSAPI_KEY is unset or still set to 'replace_me'. Ingestion endpoint will return HTTP 400 until configured."
+        )
+
     start_scheduler(settings.ingest_interval_minutes)
