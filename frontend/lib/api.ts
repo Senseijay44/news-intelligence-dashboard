@@ -10,15 +10,30 @@ function getApiBaseUrl() {
 }
 
 export async function fetchMapPoints() {
-  const res = await fetch(`${getApiBaseUrl()}/api/v1/events/map`, {
+  const baseUrl = getApiBaseUrl();
+
+  const articleRes = await fetch(`${baseUrl}/api/v1/articles/map`, {
     cache: "no-store",
   });
 
-  if (!res.ok) {
+  if (!articleRes.ok) {
+    throw new Error("Failed to fetch article map points");
+  }
+
+  const articlePoints = await articleRes.json();
+  if (Array.isArray(articlePoints) && articlePoints.length > 0) {
+    return articlePoints;
+  }
+
+  const eventRes = await fetch(`${baseUrl}/api/v1/events/map`, {
+    cache: "no-store",
+  });
+
+  if (!eventRes.ok) {
     throw new Error("Failed to fetch event map points");
   }
 
-  return res.json();
+  return eventRes.json();
 }
 
 export async function fetchRawArticleMapPoints() {
