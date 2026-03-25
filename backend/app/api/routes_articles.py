@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 
 from app.db.models import Article, Source
 from app.db.session import get_session
+from app.services.event import compute_confidence_score
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -105,7 +106,11 @@ def list_article_map_points(
             "latitude": row.latitude,
             "longitude": row.longitude,
             "article_count": 1,
-            "confidence_score": 0.55,
+            "confidence_score": compute_confidence_score(
+                article_count=1,
+                source_count=1 if row.source_name else 0,
+                newest_article_at=row.published_at,
+            ),
             "source_name": row.source_name,
             "published_at": row.published_at,
         }

@@ -141,6 +141,26 @@ If you run backend outside Docker, update `DATABASE_URL` to point at your reacha
 
 ---
 
+
+## Confidence score behavior
+
+The `confidence_score` shown in the UI is now computed from observable coverage signals instead of a fixed fallback value.
+
+Current score inputs:
+- article count (more corroborating articles increases confidence)
+- distinct source count (cross-source corroboration increases confidence)
+- recency (newer coverage scores higher)
+- temporal consistency (coverage concentrated in a tighter time span scores higher)
+
+Implementation details:
+- Article map endpoint computes per-item score in `backend/app/api/routes_articles.py` via `compute_confidence_score(...)`.
+- Event map endpoint computes per-item score in `backend/app/api/routes_events.py` via `compute_confidence_score(...)`.
+- Shared scoring logic lives in `backend/app/services/event.py`.
+
+This is still a heuristic score, but it is no longer hardcoded and now reflects real backend signals.
+
+---
+
 ## Notes
 
 - Location extraction now uses spaCy NER labels (`GPE`, `LOC`, `FAC`).

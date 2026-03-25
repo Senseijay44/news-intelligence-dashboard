@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.db.models import Article, Event, Source
 from app.db.session import get_session
 from app.schemas.event import EventMapPoint, EventNeutralSummary
-from app.services.event import build_event_neutral_summary, rebuild_events
+from app.services.event import build_event_neutral_summary, compute_confidence_score, rebuild_events
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -61,7 +61,6 @@ def list_event_map_points(
             Event.location_name,
             Event.latitude,
             Event.longitude,
-            Event.confidence_score,
             Event.first_seen_at,
             Event.last_updated_at,
             func.count(Article.id).label("article_count"),
@@ -105,7 +104,6 @@ def list_event_map_points(
         Event.location_name,
         Event.latitude,
         Event.longitude,
-        Event.confidence_score,
         Event.first_seen_at,
         Event.last_updated_at,
     ).order_by(Event.last_updated_at.desc()).limit(limit)
@@ -120,7 +118,12 @@ def list_event_map_points(
             latitude=row.latitude,
             longitude=row.longitude,
             article_count=row.article_count,
-            confidence_score=row.confidence_score,
+            confidence_score=compute_confidence_score(
+                article_count=row.article_count,
+                source_count=row.source_count,
+                newest_article_at=row.last_updated_at,
+                oldest_article_at=row.first_seen_at,
+            ),
             source_count=row.source_count,
             first_seen_at=row.first_seen_at,
             last_updated_at=row.last_updated_at,

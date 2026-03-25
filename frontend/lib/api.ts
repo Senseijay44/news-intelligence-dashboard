@@ -80,3 +80,16 @@ export async function fetchRawArticleMapPoints() {
 
   return res.json();
 }
+
+
+export async function runIngest() {
+  const res = await fetch(`${getApiBaseUrl()}/api/v1/ingest/run`, {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to run ingest");
+  }
+
+  return res.json();
+}

@@ -240,6 +240,36 @@ def build_event_neutral_summary(event: Event, articles: Sequence[Article]) -> di
     }
 
 
+
+
+def compute_confidence_score(
+    *,
+    article_count: int,
+    source_count: int,
+    newest_article_at: datetime | None,
+    oldest_article_at: datetime | None = None,
+) -> float:
+    article_signal = min(1.0, article_count / 6)
+    source_signal = min(1.0, source_count / 4)
+
+    recency_signal = 0.0
+    if newest_article_at:
+        hours_old = max(0.0, (datetime.utcnow() - newest_article_at).total_seconds() / 3600)
+        recency_signal = max(0.0, 1.0 - (hours_old / 72))
+
+    consistency_signal = 0.5
+    if oldest_article_at and newest_article_at and newest_article_at >= oldest_article_at:
+        span_hours = (newest_article_at - oldest_article_at).total_seconds() / 3600
+        consistency_signal = max(0.0, 1.0 - min(span_hours, 168) / 168)
+
+    score = (
+        (article_signal * 0.35)
+        + (source_signal * 0.35)
+        + (recency_signal * 0.2)
+        + (consistency_signal * 0.1)
+    )
+    return max(0.05, min(0.99, round(score, 3)))
+
 def _cluster_centroid_location(articles: Iterable[Article]) -> tuple[float | None, float | None, str | None]:
     geolocated = [a for a in articles if a.latitude is not None and a.longitude is not None]
     if not geolocated:
@@ -279,7 +309,12 @@ def rebuild_events(session: Session, lookback_hours: int = 120) -> dict:
             location_name=location_name,
             latitude=lat,
             longitude=lon,
-            confidence_score=min(1.0, 0.4 + (len(cluster_articles) * 0.1)),
+            confidence_score=compute_confidence_score(
+                article_count=len(cluster_articles),
+                source_count=len({a.source_id for a in cluster_articles if a.source_id is not None}),
+                newest_article_at=sorted_articles[-1].published_at,
+                oldest_article_at=sorted_articles[0].published_at,
+            ),
             first_seen_at=sorted_articles[0].published_at or datetime.utcnow(),
             last_updated_at=sorted_articles[-1].published_at or datetime.utcnow(),
         )
