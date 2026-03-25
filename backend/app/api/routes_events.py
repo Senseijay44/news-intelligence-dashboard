@@ -4,8 +4,8 @@ from sqlmodel import Session, select
 
 from app.db.models import Article, Event
 from app.db.session import get_session
-from app.schemas.event import EventMapPoint
-from app.services.event import rebuild_events
+from app.schemas.event import EventMapPoint, EventNeutralSummary
+from app.services.event import build_event_neutral_summary, rebuild_events
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -70,3 +70,21 @@ def list_event_map_points(limit: int = 200, session: Session = Depends(get_sessi
 @router.post("/rebuild")
 def rebuild_event_clusters(session: Session = Depends(get_session)):
     return rebuild_events(session)
+
+
+@router.get("/{event_id}/neutral-summary", response_model=EventNeutralSummary)
+def get_event_neutral_summary(event_id: int, session: Session = Depends(get_session)):
+    event = session.get(Event, event_id)
+    if not event:
+        return {
+            "event_id": event_id,
+            "core_facts": [],
+            "disputed_points": [],
+            "uncertainty": ["event not found"],
+            "source_count": 0,
+        }
+
+    articles = session.exec(
+        select(Article).where(Article.event_id == event_id).order_by(Article.published_at.desc())
+    ).all()
+    return build_event_neutral_summary(event, articles)

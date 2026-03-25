@@ -13,6 +13,24 @@ from app.db.models import Article, Event
 
 TOKEN_RE = re.compile(r"[a-zA-Z0-9]+")
 ENTITY_RE = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b")
+CLAUSE_SPLIT_RE = re.compile(r"\s*(?:[.;!?]|\s+-\s+|\s+and\s+)\s*")
+
+ATTRIBUTION_RE = re.compile(
+    r"\b(said|says|according to|told|announced|reported by|claimed|stated)\b",
+    flags=re.IGNORECASE,
+)
+ANALYSIS_RE = re.compile(
+    r"\b(suggests|suggested|indicates|appears|likely|because|therefore|signals|implies)\b",
+    flags=re.IGNORECASE,
+)
+OPINION_RE = re.compile(
+    r"\b(criticized|praised|outrageous|unacceptable|disaster|success|failure|bias|propaganda)\b",
+    flags=re.IGNORECASE,
+)
+PREDICTION_RE = re.compile(
+    r"\b(will|would|expected|forecast|projected|could|may|might|anticipates)\b",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass
@@ -29,6 +47,13 @@ class ClusterConfig:
     entity_weight: float = 0.20
     similarity_threshold: float = 0.45
     time_window_hours: int = 72
+
+
+@dataclass
+class ExtractedClaim:
+    text: str
+    claim_type: str
+    article: Article
 
 
 def _tokenize(text: str) -> list[str]:
@@ -116,6 +141,103 @@ def _to_signal(article: Article) -> ArticleSignal:
         vector=_build_vector(article.title, article.description),
         entities=_extract_entities(article.title, article.description),
     )
+
+
+def _extract_atomic_claims(article: Article) -> list[str]:
+    fragments: list[str] = []
+    for text in (article.title, article.description, article.body):
+        if not text:
+            continue
+        for raw in CLAUSE_SPLIT_RE.split(text):
+            claim = raw.strip()
+            if len(claim) >= 25:
+                fragments.append(claim)
+    deduped = list(dict.fromkeys(fragments))
+    return deduped
+
+
+def _classify_claim(claim: str) -> str:
+    if ATTRIBUTION_RE.search(claim):
+        return "attributed statement"
+    if PREDICTION_RE.search(claim):
+        return "prediction"
+    if ANALYSIS_RE.search(claim):
+        return "analysis/inference"
+    if OPINION_RE.search(claim):
+        return "opinion/framing"
+    return "reported fact"
+
+
+def _normalize_claim_text(claim: str) -> str:
+    return " ".join(_tokenize(claim))
+
+
+def _group_claims_by_text(claims: list[ExtractedClaim]) -> dict[str, list[ExtractedClaim]]:
+    grouped: dict[str, list[ExtractedClaim]] = {}
+    for claim in claims:
+        key = _normalize_claim_text(claim.text)
+        grouped.setdefault(key, []).append(claim)
+    return grouped
+
+
+def build_event_neutral_summary(event: Event, articles: Sequence[Article]) -> dict:
+    extracted: list[ExtractedClaim] = []
+    for article in articles:
+        for claim in _extract_atomic_claims(article):
+            extracted.append(ExtractedClaim(text=claim, claim_type=_classify_claim(claim), article=article))
+
+    grouped = _group_claims_by_text(extracted)
+    core_facts: list[dict] = []
+    disputed_points: list[dict] = []
+    uncertainty: list[str] = []
+
+    for group in grouped.values():
+        if not group:
+            continue
+        first = group[0]
+        unique_sources = {
+            item.article.id: item.article
+            for item in group
+            if item.article.id is not None
+        }
+        source_items = [
+            {
+                "article_id": article.id,
+                "title": article.title,
+                "url": article.url,
+                "published_at": article.published_at,
+            }
+            for article in unique_sources.values()
+            if article.id is not None
+        ]
+        claim_payload = {
+            "text": first.text,
+            "claim_type": first.claim_type,
+            "source_count": len(unique_sources),
+            "sources": source_items,
+        }
+
+        claim_types = {item.claim_type for item in group}
+        if len(claim_types) > 1:
+            disputed_points.append(claim_payload)
+        elif first.claim_type in {"reported fact", "attributed statement"} and len(unique_sources) >= 2:
+            core_facts.append(claim_payload)
+        elif first.claim_type in {"analysis/inference", "opinion/framing", "prediction"}:
+            uncertainty.append(f"{first.claim_type}: {first.text}")
+        elif len(unique_sources) == 1:
+            uncertainty.append(f"single source: {first.text}")
+
+    core_facts = sorted(core_facts, key=lambda c: (-c["source_count"], c["text"]))[:10]
+    disputed_points = sorted(disputed_points, key=lambda c: (-c["source_count"], c["text"]))[:10]
+    uncertainty = uncertainty[:10]
+
+    return {
+        "event_id": event.id,
+        "core_facts": core_facts,
+        "disputed_points": disputed_points,
+        "uncertainty": uncertainty,
+        "source_count": len({a.id for a in articles if a.id is not None}),
+    }
 
 
 def _cluster_centroid_location(articles: Iterable[Article]) -> tuple[float | None, float | None, str | None]:
