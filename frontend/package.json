@@ -12,5 +12,10 @@
     "react": "latest",
     "react-dom": "latest",
     "react-leaflet": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.2.2",
+    "typescript": "^5.9.3"
   }
 }

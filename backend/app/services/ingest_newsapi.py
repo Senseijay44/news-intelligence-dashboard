@@ -48,7 +48,7 @@ def ingest_newsapi(session: Session, query: str | None = None, page_size: int = 
         location_name = extract_location_candidate(
             f"{normalized.get('title', '')}. {normalized.get('description', '')}"
         )
-        lat, lon = geocode_location(location_name)
+        lat, lon = geocode_location(session, location_name)
 
         article = Article(
             source_id=source.id,

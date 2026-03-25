@@ -50,3 +50,15 @@ class Event(SQLModel, table=True):
     confidence_score: float = 0.5
     first_seen_at: datetime = Field(default_factory=datetime.utcnow)
     last_updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class GeocodeCache(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    query: str
+    query_normalized: str = Field(index=True, unique=True)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=False), nullable=False),
+    )
