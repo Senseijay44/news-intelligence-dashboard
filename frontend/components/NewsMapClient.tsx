@@ -1,13 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-
-const LeafletMapContainer = MapContainer as any;
-const LeafletTileLayer = TileLayer as any;
-const LeafletMarker = Marker as any;
-const LeafletPopup = Popup as any;
 
 type MapPoint = {
   id: string | number;
@@ -30,22 +25,59 @@ const defaultIcon = L.icon({
 });
 
 export default function NewsMapClient({ points }: { points: MapPoint[] }) {
-  return (
-    <LeafletMapContainer center={[20, 0]} zoom={2} scrollWheelZoom={true} style={{ height: "100vh", width: "100%" }}>
-      <LeafletTileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {points.map((point) => (
-        <LeafletMarker key={point.id} position={[point.latitude, point.longitude]} icon={defaultIcon}>
-          <LeafletPopup>
-            <strong>{point.title}</strong>
-            <br />
-            {point.location_name || "Unknown location"}
-            <br />
-            Related articles: {point.article_count ?? 1}
-            <br />
-            Confidence: {Math.round((point.confidence_score ?? 0) * 100)}%
-          </LeafletPopup>
-        </LeafletMarker>
-      ))}
-    </LeafletMapContainer>
-  );
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) {
+      return;
+    }
+
+    const map = L.map(mapRef.current).setView([20, 0], 2);
+    mapInstanceRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+
+    markersLayerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      markersLayerRef.current?.clearLayers();
+      markersLayerRef.current = null;
+      mapInstanceRef.current?.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markerLayer = markersLayerRef.current;
+
+    if (!map || !markerLayer) {
+      return;
+    }
+
+    markerLayer.clearLayers();
+
+    points.forEach((point) => {
+      const marker = L.marker([point.latitude, point.longitude], { icon: defaultIcon });
+
+      marker.bindPopup(
+        `<strong>${point.title}</strong><br/>${point.location_name || "Unknown location"}<br/>Related articles: ${point.article_count ?? 1}<br/>Confidence: ${Math.round((point.confidence_score ?? 0) * 100)}%`,
+      );
+
+      marker.addTo(markerLayer);
+    });
+
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points.map((point) => [point.latitude, point.longitude] as [number, number]));
+      map.fitBounds(bounds.pad(0.2));
+    } else {
+      map.setView([20, 0], 2);
+    }
+  }, [points]);
+
+  return <div ref={mapRef} style={{ height: "100vh", width: "100%" }} />;
 }
