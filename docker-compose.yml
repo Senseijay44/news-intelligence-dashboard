@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -28,7 +26,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    command:
+      [
+        "sh",
+        "-c",
+        "python scripts/wait_for_db.py && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+      ]
     ports:
       - "8000:8000"
     volumes:
@@ -38,9 +41,11 @@ services:
     build: ./frontend
     container_name: news_frontend
     environment:
-      API_BASE_URL: http://backend:8000
+      INTERNAL_API_BASE_URL: http://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     ports:
       - "3000:3000"
     volumes:

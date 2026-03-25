@@ -30,7 +30,7 @@ Edit `backend/.env` and set:
 NEWSAPI_KEY=your_real_key_here
 ```
 
-> Keep `DATABASE_URL` as-is for Docker Compose (`...@db:5432/...`).
+> Keep `DATABASE_URL` set to the Docker hostname (`...@db:5432/...`) when running via Compose.
 
 ---
 
@@ -40,12 +40,14 @@ NEWSAPI_KEY=your_real_key_here
 docker compose up --build
 ```
 
-What happens on startup:
-1. Postgres/PostGIS container starts.
-2. Compose waits for DB health check (`pg_isready`).
+Corrected startup flow:
+1. Postgres/PostGIS starts and must pass `pg_isready` healthcheck.
+2. Backend waits for an actual SQL connection (`python scripts/wait_for_db.py`).
 3. Backend runs `alembic upgrade head`.
-4. Backend starts FastAPI server.
-5. Frontend starts Next.js dev server.
+4. Backend starts FastAPI (`uvicorn`).
+5. Frontend starts Next.js and uses:
+   - `INTERNAL_API_BASE_URL=http://backend:8000` for server-side fetches inside the container.
+   - `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` for browser requests.
 
 ---
 
@@ -54,6 +56,18 @@ What happens on startup:
 - Frontend: http://localhost:3000
 - Backend docs: http://localhost:8000/docs
 - Health endpoint: http://localhost:8000/api/v1/health
+
+You can also verify from Compose logs:
+
+```bash
+docker compose logs -f db backend frontend
+```
+
+Expected signs of success:
+- backend logs `Database is ready`
+- alembic upgrade completes
+- no `sqlalchemy.exc.ArgumentError` in backend logs
+- frontend no longer errors with `EAI_AGAIN backend`
 
 ---
 
@@ -115,5 +129,5 @@ If you run backend outside Docker, update `DATABASE_URL` to point at your reacha
 ## Notes
 
 - Location extraction now uses spaCy NER labels (`GPE`, `LOC`, `FAC`).
-- Geocoding now checks `geocodecache` first and stores successful/empty lookups to avoid repeated external geocoding calls.
+- Geocoding checks `geocodecache` first and stores successful/empty lookups to avoid repeated external geocoding calls.
 - Leaflet marker icons are explicitly configured so markers render correctly in Next.js.
