@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: news_db
+    environment:
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/init-postgis.sql:/docker-entrypoint-initdb.d/init-postgis.sql
+
+  backend:
+    build: ./backend
+    container_name: news_backend
+    env_file:
+      - ./backend/.env.example
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    container_name: news_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+
+volumes:
+  postgres_data:

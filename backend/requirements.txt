@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+sqlalchemy
+psycopg[binary]
+python-dotenv
+httpx
+pydantic
+pydantic-settings
+apscheduler
+geopy
+python-dateutil
+alembic
