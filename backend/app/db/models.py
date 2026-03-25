@@ -23,6 +23,7 @@ class Source(SQLModel, table=True):
 class Article(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     source_id: Optional[int] = Field(default=None, foreign_key="source.id")
+    event_id: Optional[int] = Field(default=None, foreign_key="event.id", index=True)
     title: str = Field(index=True)
     url: str = Field(index=True, unique=True)
     author: Optional[str] = None

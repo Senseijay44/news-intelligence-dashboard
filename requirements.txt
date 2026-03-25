@@ -11,3 +11,4 @@ apscheduler
 geopy
 python-dateutil
 alembic
+pytest

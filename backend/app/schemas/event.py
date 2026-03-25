@@ -13,3 +13,16 @@ class EventRead(BaseModel):
     confidence_score: float
     first_seen_at: datetime
     last_updated_at: datetime
+
+
+class EventMapPoint(BaseModel):
+    id: int
+    title: str
+    summary: Optional[str] = None
+    location_name: Optional[str] = None
+    latitude: float
+    longitude: float
+    article_count: int
+    confidence_score: float
+    first_seen_at: datetime
+    last_updated_at: datetime
